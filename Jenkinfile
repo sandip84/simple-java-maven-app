@@ -39,20 +39,24 @@ pipeline {
 
     stage('Build Java') {
       steps {
-        sh '''
-           mvn clean package -DskipTests
-           echo 'sandip....................'
-        '''
+        container('maven') {
+          sh '''
+             mvn clean package -DskipTests
+             echo 'sandip....................'
+          '''
+        }  
       }
     }
 
     stage('Deploy JAR to Nexus') {
       steps {
-        sh """
-        mvn deploy \
-          -DskipTests \
-          -DaltDeploymentRepository=nexus::default::${NEXUS_REPO}
-        """
+        container('maven') {
+          sh """
+          mvn deploy \
+            -DskipTests \
+            -DaltDeploymentRepository=nexus::default::${NEXUS_REPO}
+          """
+        }  
       }
     }
 
