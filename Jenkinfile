@@ -2,7 +2,10 @@
 pipeline {
   agent {
     kubernetes {
-      yaml javaKanikoAgent()
+      yaml javaKanikoAgent(
+        mavenImage: "maven:3.9.6-eclipse-temurin-17",
+        kanikoImage: "gcr.io/kaniko-project/executor:debug"
+      )
     }
   }
   environment {
