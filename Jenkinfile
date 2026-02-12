@@ -23,9 +23,6 @@ pipeline {
 
     IMAGE_TAG = "${BUILD_NUMBER}"
     ECR_URI = "${AWS_ACCOUNT}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPO}"
-
-    ECS_CLUSTER = "my-cluster"
-    ECS_SERVICE = "my-service"
   }
 
   stages {
@@ -42,7 +39,6 @@ pipeline {
         container('maven') {
           sh '''
              mvn clean package -DskipTests
-             echo 'sandip....................'
           '''
         }  
       }
@@ -74,15 +70,38 @@ pipeline {
       }
     }
 
-    // stage('Deploy to Fargate') {
-    //   steps {
-    //     sh """
-    //     aws ecs update-service \
-    //       --cluster ${ECS_CLUSTER} \
-    //       --service ${ECS_SERVICE} \
-    //       --force-new-deployment
-    //     """
-    //   }
-    // }
+    stage('Create ECR Pull Secret') {
+      steps {
+        container('kaniko') {
+          sh """
+          TOKEN=\$(aws ecr get-login-password --region ${AWS_REGION})
+
+          kubectl delete secret ecr-secret -n java-app --ignore-not-found
+
+          kubectl create secret docker-registry ecr-secret \
+            -n java-app \
+            --docker-server=${AWS_ACCOUNT}.dkr.ecr.${AWS_REGION}.amazonaws.com \
+            --docker-username=AWS \
+            --docker-password="\$TOKEN"
+          """
+        }
+      }
+    }
+
+    stage('Deploy to Kubernetes (Kind)') {
+      steps {
+        container('kaniko') {
+          sh """
+          sed -i 's|REPLACE_IMAGE|${ECR_URI}:${IMAGE_TAG}|' k8s/deployment.yaml
+
+          kubectl apply -f k8s/deployment.yaml
+          kubectl apply -f k8s/service.yaml
+
+          kubectl rollout status deployment/java-app
+          """
+        }
+      }
+    }
+
   }
 }
