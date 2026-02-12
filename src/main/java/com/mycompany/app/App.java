@@ -5,7 +5,7 @@ package com.mycompany.app;
  */
 public class App {
 
-    private static final String MESSAGE = "Hello kumar12";
+    private static final String MESSAGE = "Hello kumar123";
 
     public App() {}
 
