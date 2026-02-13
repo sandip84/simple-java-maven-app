@@ -6,11 +6,13 @@ pipeline {
       yaml javaKanikoAgent(
         [
           mavenImage: "maven:3.9.6-eclipse-temurin-17",
-          kanikoImage: "gcr.io/kaniko-project/executor:debug"
-        ],
-        jenkinsAgentTools(
+          kanikoImage: "gcr.io/kaniko-project/executor:debug",
           toolImage: "ghcr.io/sandip84/jenkins-agent-tools:v0.1.3"
-        )
+        ]
+        // ,
+        // jenkinsAgentTools(
+        //   toolImage: "ghcr.io/sandip84/jenkins-agent-tools:v0.1.3"
+        // )
       )
     }
   }
