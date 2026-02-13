@@ -30,7 +30,7 @@ pipeline {
     AWS_ACCOUNT = "168400405045"
     ECR_REPO = "java-app"
 
-    IMAGE_TAG = "${BUILD_NUMBER}"
+    // IMAGE_TAG = "${BUILD_NUMBER}"
     ECR_URI = "${AWS_ACCOUNT}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPO}"
 
     // ===== K8S =====
@@ -79,7 +79,7 @@ pipeline {
           /kaniko/executor \
             --context ${WORKSPACE} \
             --dockerfile Dockerfile \
-            --destination ${ECR_URI}:${IMAGE_TAG} \
+            --destination ${ECR_URI}:${K8S_IMAGE_TAG} \
             --destination ${ECR_URI}:latest
           """
         }
