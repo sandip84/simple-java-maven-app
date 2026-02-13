@@ -102,6 +102,13 @@ pipeline {
       }
     }
 
+    stage('DEBUG POD') {
+      steps {
+        sh 'echo "Pod name: $HOSTNAME"'
+        sh 'kubectl get pod $HOSTNAME -o yaml'
+      }
+    }
+
     stage('Verify Image Exists in  ECR') {
       steps {
         container('tools') {
