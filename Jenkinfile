@@ -143,14 +143,13 @@ pipeline {
       steps {
         container('tools') {
           sh """
-            TOKEN=\$(aws ecr get-login-password --region ${AWS_REGION})
-
-            echo \$TOKEN | kubectl create secret docker-registry ecr-secret \
-              --docker-server=${AWS_ACCOUNT}.dkr.ecr.${AWS_REGION}.amazonaws.com \
-              --docker-username=AWS \
-              --docker-password-stdin \
-              -n ${K8S_NAMESPACE} \
-              --dry-run=client -o yaml | kubectl apply -f -
+            TOKEN=\$(aws ecr get-login-password --region ${AWS_REGION}) && \
+            echo "\$TOKEN" | kubectl create secret docker-registry ecr-secret \
+            --docker-server=${AWS_ACCOUNT}.dkr.ecr.${AWS_REGION}.amazonaws.com \
+            --docker-username=AWS \
+            --docker-password-stdin \
+            -n ${K8S_NAMESPACE} \
+            --dry-run=client -o yaml | kubectl apply -f -
           """
         }
       }
