@@ -95,7 +95,7 @@ pipeline {
     stage('Validate Inputs') {
       steps {
         script {
-          if (!${K8S_IMAGE_TAG}?.trim()) {
+          if (!K8S_IMAGE_TAG?.trim()) {
             error("IMAGE_TAG is required (example: git-fea78db).")
           }
         }
