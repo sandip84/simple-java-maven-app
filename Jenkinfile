@@ -140,7 +140,7 @@ pipeline {
     }
 
     stage('Refresh ECR Pull Secret (Kind)') {
-      when { expression { return params.REFRESH_ECR_PULL_SECRET } }
+      // when { expression { return params.REFRESH_ECR_PULL_SECRET } }
       steps {
         container('tools') {
           sh '''
