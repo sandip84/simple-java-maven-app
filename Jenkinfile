@@ -30,6 +30,13 @@ pipeline {
 
     IMAGE_TAG = "${BUILD_NUMBER}"
     ECR_URI = "${AWS_ACCOUNT}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPO}"
+
+    // ===== K8S =====
+    K8S_GIT_REPO    = "https://github.com/sandip84/k8s.git"
+    K8S_GIT_BRANCH  = "main"
+    K8S_NAMESPACE = "java-app-ns"          // change if you use default
+    APP_NAME      = "java-app"          // Deployment name
+    K8S_IMAGE_TAG = sh(script: "git rev-parse --short HEAD", returnStdout: true).trim()
   }
 
   stages {
@@ -76,10 +83,115 @@ pipeline {
         }
       }
     }
+    //---------k8s--------------------------------
 
+    stage('Checkout CD Repo') {
+      steps {
+        git branch: "${K8S_GIT_BRANCH}",
+            url: "${K8S_GIT_REPO}"
+      }
+    }
 
+    stage('Validate Inputs') {
+      steps {
+        script {
+          if (!${K8S_IMAGE_TAG}?.trim()) {
+            error("IMAGE_TAG is required (example: git-fea78db).")
+          }
+        }
+      }
+    }
 
+    stage('Verify Image Exists in  ECR') {
+      steps {
+        container('tools') {
+          sh """
+            aws ecr describe-images \
+              --region ${AWS_REGION} \
+              --repository-name ${ECR_REPO} \
+              --image-ids imageTag=${K8S_IMAGE_TAG} \
+              --query 'imageDetails[0].imageDigest' \
+              --output text
+          """
+        }
+      }
+    }
 
+    stage('Create Namespace (YAML)') {
+      steps {
+        container('tools') {
+          sh """
+            kubectl apply -f namespace.yaml
+            # kubectl apply -f ServiceAccount.yaml
+          """
+        }  
+      }
+    }
 
+    stage('Refresh ECR Pull Secret (Kind)') {
+      when { expression { return params.REFRESH_ECR_PULL_SECRET } }
+      steps {
+        container('tools') {
+          sh '''
+            TOKEN=$(aws ecr get-login-password --region ${AWS_REGION})
+
+            cat > /tmp/config.json <<EOF
+            {
+              "auths": {
+                "${AWS_ACCOUNT}.dkr.ecr.${AWS_REGION}.amazonaws.com": {
+                  "username": "AWS",
+                  "password": "$TOKEN"
+                }
+              }
+            }
+            EOF
+            kubectl create secret generic ecr-secret \
+              -n ${K8S_NAMESPACE} \
+              --from-file=.dockerconfigjson=/tmp/config.json \
+              --type=kubernetes.io/dockerconfigjson \
+              --dry-run=client -o yaml | kubectl apply -f -
+          '''
+        }
+      }
+    }
+
+    stage('Render Manifests with Image') {
+      steps {
+        sh """
+          mkdir -p rendered
+
+          # Render deployment with correct image without modifying tracked file
+          sed "s|nginx|${ECR_URI}:${K8S_IMAGE_TAG}|g" deployment.yaml > rendered/deployment.yaml
+
+          # Copy other manifests as-is
+          cp service.yaml rendered/service.yaml
+          cp namespace.yaml rendered/namespace.yaml
+        """
+      }
+    }
+
+    stage('Apply to Kubernetes') {
+      steps {
+        container('tools') {
+          sh """
+            kubectl apply -f rendered/namespace.yaml
+            kubectl apply -f rendered/deployment.yaml
+            kubectl apply -f rendered/service.yaml
+          """
+        }
+      }
+    }
+
+    stage('Wait for Rollout') {
+      steps {
+        container('tools') {
+          sh """
+            kubectl rollout status deployment/${APP_NAME} -n ${K8S_NAMESPACE} --timeout=180s || true
+            kubectl get pods -n ${K8S_NAMESPACE}
+            kubectl describe deployment ${APP_NAME} -n ${K8S_NAMESPACE}
+          """
+        }
+      }
+    }
   }
 }
