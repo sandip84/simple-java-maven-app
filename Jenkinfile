@@ -104,8 +104,10 @@ pipeline {
 
     stage('DEBUG POD') {
       steps {
-        sh 'echo "Pod name: $HOSTNAME"'
-        sh 'kubectl get pod $HOSTNAME -o yaml'
+        container('tools') {
+          sh 'echo "Pod name: $HOSTNAME"'
+          sh 'kubectl get pod $HOSTNAME -o yaml'
+        }
       }
     }
 
