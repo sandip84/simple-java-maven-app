@@ -133,7 +133,7 @@ pipeline {
         container('tools') {
           sh """
             kubectl apply -f namespace.yaml
-            # kubectl apply -f ServiceAccount.yaml
+            kubectl apply -f ServiceAccount.yaml
           """
         }  
       }
