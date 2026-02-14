@@ -38,45 +38,48 @@ pipeline {
     K8S_GIT_BRANCH  = "main"
     K8S_NAMESPACE = "java-app-ns"          // change if you use default
     APP_NAME      = "java-app"          // Deployment name
-    K8S_IMAGE_TAG = sh(script: "git rev-parse --short HEAD", returnStdout: true).trim()
+    K8S_IMAGE_TAG = "123456"   //sh(script: "git rev-parse --short HEAD", returnStdout: true).trim()
   }
 
   stages {
 
-    stage('Checkout') {
-      steps {
-        git branch: "${GIT_BRANCH}",
-            url: "${GIT_REPO}"
-      }
-    }
+    // stage('Checkout') {
+    //   steps {
+    //     git branch: "${GIT_BRANCH}",
+    //         url: "${GIT_REPO}"
+    //   }
+    // }
 
-    stage('Build Java') {
-      steps {
-        container('maven') {
-          sh '''
-             mvn clean package -DskipTests
-          '''
-        }  
-      }
-    }
+    // stage('Build Java') {
+    //   steps {
+    //     container('maven') {
+    //       sh '''
+    //          mvn clean package -DskipTests
+    //       '''
+    //     }  
+    //   }
+    // }
 
-    stage('Deploy JAR to Nexus') {
-      steps {
-        container('maven') {
-          sh """
-          mvn deploy \
-            -DskipTests \
-            -DaltDeploymentRepository=nexus::default::${NEXUS_REPO}
-          """
-        }  
-      }
-    }
+    // stage('Deploy JAR to Nexus') {
+    //   steps {
+    //     container('maven') {
+    //       sh """
+    //       mvn deploy \
+    //         -DskipTests \
+    //         -DaltDeploymentRepository=nexus::default::${NEXUS_REPO}
+    //       """
+    //     }  
+    //   }
+    // }
 
 stage('Build & Push Image (Buildah)') {
   steps {
     container('buildah') {
       sh '''
       set -e
+
+      echo "Installing AWS CLI..."
+      dnf install -y awscli
 
       aws ecr get-login-password --region $AWS_REGION | \
         buildah login --username AWS --password-stdin ${AWS_ACCOUNT}.dkr.ecr.${AWS_REGION}.amazonaws.com
@@ -90,6 +93,7 @@ stage('Build & Push Image (Buildah)') {
     }
   }
 }
+
 
 
     //---------k8s--------------------------------
