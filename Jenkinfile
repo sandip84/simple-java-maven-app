@@ -38,7 +38,7 @@ pipeline {
     K8S_GIT_BRANCH  = "main"
     K8S_NAMESPACE = "java-app-ns"          // change if you use default
     APP_NAME      = "java-app"          // Deployment name
-    K8S_IMAGE_TAG = sh(script: "git rev-parse --short HEAD", returnStdout: true).trim()
+    K8S_IMAGE_TAG = "444555" //sh(script: "git rev-parse --short HEAD", returnStdout: true).trim()
   }
 
   stages {
