@@ -82,9 +82,11 @@ stage('Build & Push Image (Rootless BuildKit)') {
 
       TOKEN=$(aws ecr get-login-password --region $AWS_REGION)
 
-      mkdir -p /home/user/.docker
+      echo "HOME is $HOME"
 
-      cat > /home/user/.docker/config.json <<EOF
+      mkdir -p $HOME/.docker
+
+      cat > $HOME/.docker/config.json <<EOF
 {
   "auths": {
     "${ECR_URI}": {
@@ -101,6 +103,8 @@ EOF
       sh '''
       set -e
 
+      echo "Using Docker config from $HOME/.docker/config.json"
+
       buildctl build \
         --progress=plain \
         --frontend dockerfile.v0 \
@@ -112,6 +116,7 @@ EOF
     }
   }
 }
+
 
 
 
