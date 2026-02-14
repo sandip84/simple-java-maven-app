@@ -3,10 +3,10 @@
 pipeline {
   agent {
     kubernetes {
-      yaml javaKanikoAgent(
+      yaml javaBuildkitAgent(
         [
           mavenImage: "maven:3.9.6-eclipse-temurin-17",
-          buildkitImage: "ghcr.io/tonistiigi/buildkit-rootless:v0.12.5",
+          buildkitImage: "public.ecr.aws/docker/library/buildkit:rootless",
           toolImage: "ghcr.io/sandip84/jenkins-agent-tools:v0.1.3"
         ]
         // ,
