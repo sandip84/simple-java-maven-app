@@ -1,6 +1,5 @@
-FROM eclipse-temurin:17-jre
-#FROM docker.io/library/eclipse-temurin:17-jre
-
+#FROM eclipse-temurin:17-jre
+FROM docker.io/library/eclipse-temurin:17-jre
 WORKDIR /app
 
 # Copy the JAR produced by Maven
