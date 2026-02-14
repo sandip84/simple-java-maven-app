@@ -104,7 +104,7 @@ EOF
       set -e
 
       echo "Using Docker config from $HOME/.docker/config.json"
-
+      export DOCKER_CONFIG=/home/buildkit/.docker
       buildctl build \
         --progress=plain \
         --frontend dockerfile.v0 \
