@@ -6,8 +6,8 @@ pipeline {
       yaml javaBuildkitAgent(
         [
           mavenImage: "maven:3.9.6-eclipse-temurin-17",
-          buildahImage: "quay.io/buildah/stable:v1.34",
-          toolImage: "ghcr.io/sandip84/buildah-agent-tools:v1.0.0"
+          buildahImage: "ghcr.io/sandip84/buildah-agent-tools.git:v1.0.0",
+          toolImage: "ghcr.io/sandip84/jenkins-agent-tools:v0.1.3"
         ]
         // ,
         // jenkinsAgentTools(
@@ -77,6 +77,9 @@ stage('Build & Push Image (Buildah)') {
     container('buildah') {
       sh '''
       set -e
+
+      echo "Installing AWS CLI..."
+      dnf install -y awscli
 
       aws ecr get-login-password --region $AWS_REGION | \
         buildah login --username AWS --password-stdin ${AWS_ACCOUNT}.dkr.ecr.${AWS_REGION}.amazonaws.com
