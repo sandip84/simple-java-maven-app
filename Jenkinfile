@@ -72,33 +72,47 @@ pipeline {
       }
     }
 
-    stage('Build & Push Image (Rootless BuildKit)') {
-      steps {
-        container('buildkit') {
-          sh '''
-          mkdir -p /home/user/.docker
+stage('Build & Push Image (Rootless BuildKit)') {
+  steps {
+    container('buildkit') {
+      sh '''
+      set -x
 
-          cat > /home/user/.docker/config.json <<EOF
-          {
-            "auths": {
-              "${ECR_URI}": {
-                "username": "AWS",
-                "password": "$AWS_SECRET_ACCESS_KEY"
-              }
-            }
-          }
-          EOF
+      echo "ECR_URI=${ECR_URI}"
+      echo "K8S_IMAGE_TAG=${K8S_IMAGE_TAG}"
 
-          buildctl build \
-            --frontend dockerfile.v0 \
-            --local context=. \
-            --local dockerfile=. \
-            --output type=image,name=${ECR_URI}:${K8S_IMAGE_TAG},push=true \
-            --output type=image,name=${ECR_URI}:latest,push=true
-          '''
-        }
-      }
+      mkdir -p /home/user/.docker
+
+      cat > /home/user/.docker/config.json <<EOF
+{
+  "auths": {
+    "${ECR_URI}": {
+      "username": "AWS",
+      "password": "$AWS_SECRET_ACCESS_KEY"
     }
+  }
+}
+EOF
+
+      echo "Docker config:"
+      cat /home/user/.docker/config.json
+
+      echo "Starting build..."
+
+      buildctl build \
+        --progress=plain \
+        --frontend dockerfile.v0 \
+        --local context=. \
+        --local dockerfile=. \
+        --output type=image,name=${ECR_URI}:${K8S_IMAGE_TAG},push=true \
+        --output type=image,name=${ECR_URI}:latest,push=true
+
+      echo "Build finished"
+      '''
+    }
+  }
+}
+
 
     //---------k8s--------------------------------
 
