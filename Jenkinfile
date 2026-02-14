@@ -76,7 +76,9 @@ pipeline {
       steps {
         container('buildkit') {
           sh """
-          buildctl login --username AWS --password \$AWS_SECRET_ACCESS_KEY ${ECR_URI}
+          mkdir -p /home/user/.docker
+
+          echo '{ "auths": { "${ECR_URI}": { "username": "AWS", "password": "'$AWS_SECRET_ACCESS_KEY'" } } }' > /home/user/.docker/config.json
 
           buildctl build \
             --frontend dockerfile.v0 \
