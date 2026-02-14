@@ -38,7 +38,7 @@ pipeline {
     K8S_GIT_BRANCH  = "main"
     K8S_NAMESPACE = "java-app-ns"          // change if you use default
     APP_NAME      = "java-app"          // Deployment name
-    K8S_IMAGE_TAG = "444555" //sh(script: "git rev-parse --short HEAD", returnStdout: true).trim()
+    K8S_IMAGE_TAG = sh(script: "git rev-parse --short HEAD", returnStdout: true).trim()
   }
 
   stages {
@@ -72,31 +72,36 @@ pipeline {
       }
     }
 
-    stage('Build & Push Image (Buildah)') {
-      steps {
-        container('buildah') {
-          sh '''
-            set -e
-            mkdir -p /tmp/containers
-            cat > /tmp/containers-storage.conf <<EOF
-              [storage]
-              driver = "vfs"
-              runroot = "/tmp/containers/run"
-              graphroot = "/tmp/containers/storage"
-              EOF
-            export CONTAINERS_STORAGE_CONF=/tmp/containers-storage.conf
+stage('Build & Push Image (Buildah)') {
+  steps {
+container('buildah') {
+  sh '''
+    set -e
 
-            aws ecr get-login-password --region $AWS_REGION | \
-              buildah login --username AWS --password-stdin ${AWS_ACCOUNT}.dkr.ecr.${AWS_REGION}.amazonaws.com
+    mkdir -p /tmp/containers
 
-            buildah bud -t ${ECR_URI}:${K8S_IMAGE_TAG} .
-            buildah tag ${ECR_URI}:${K8S_IMAGE_TAG} ${ECR_URI}:latest
-            buildah push ${ECR_URI}:${K8S_IMAGE_TAG}
-            buildah push ${ECR_URI}:latest
-          '''
-        }
-      }
-    }
+    cat > /tmp/containers-storage.conf <<EOF
+[storage]
+driver = "vfs"
+runroot = "/tmp/containers/run"
+graphroot = "/tmp/containers/storage"
+EOF
+
+    export CONTAINERS_STORAGE_CONF=/tmp/containers-storage.conf
+
+    aws ecr get-login-password --region $AWS_REGION | \
+      buildah login --username AWS --password-stdin ${AWS_ACCOUNT}.dkr.ecr.${AWS_REGION}.amazonaws.com
+
+    buildah bud -t ${ECR_URI}:${K8S_IMAGE_TAG} .
+    buildah tag ${ECR_URI}:${K8S_IMAGE_TAG} ${ECR_URI}:latest
+    buildah push ${ECR_URI}:${K8S_IMAGE_TAG}
+    buildah push ${ECR_URI}:latest
+  '''
+}
+
+  }
+}
+
 
     //---------k8s--------------------------------
 
