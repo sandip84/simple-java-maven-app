@@ -9,7 +9,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 public class App {
 
-    private static final String MESSAGE = "Hello kumar212-web";
+    private static final String MESSAGE = "Hello kumar212-buildah";
 
     public static void main(String[] args) {
         SpringApplication.run(App.class, args);
