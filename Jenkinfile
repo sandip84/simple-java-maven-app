@@ -43,34 +43,34 @@ pipeline {
 
   stages {
 
-    // stage('Checkout') {
-    //   steps {
-    //     git branch: "${GIT_BRANCH}",
-    //         url: "${GIT_REPO}"
-    //   }
-    // }
+    stage('Checkout') {
+      steps {
+        git branch: "${GIT_BRANCH}",
+            url: "${GIT_REPO}"
+      }
+    }
 
-    // stage('Build Java') {
-    //   steps {
-    //     container('maven') {
-    //       sh '''
-    //          mvn clean package -DskipTests
-    //       '''
-    //     }  
-    //   }
-    // }
+    stage('Build Java') {
+      steps {
+        container('maven') {
+          sh '''
+             mvn clean package -DskipTests
+          '''
+        }  
+      }
+    }
 
-    // stage('Deploy JAR to Nexus') {
-    //   steps {
-    //     container('maven') {
-    //       sh """
-    //       mvn deploy \
-    //         -DskipTests \
-    //         -DaltDeploymentRepository=nexus::default::${NEXUS_REPO}
-    //       """
-    //     }  
-    //   }
-    // }
+    stage('Deploy JAR to Nexus') {
+      steps {
+        container('maven') {
+          sh """
+          mvn deploy \
+            -DskipTests \
+            -DaltDeploymentRepository=nexus::default::${NEXUS_REPO}
+          """
+        }  
+      }
+    }
 
 stage('Build & Push Image (Buildah)') {
   steps {
