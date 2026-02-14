@@ -6,7 +6,7 @@ pipeline {
       yaml javaBuildkitAgent(
         [
           mavenImage: "maven:3.9.6-eclipse-temurin-17",
-          buildkitImage: "moby/buildkit:rootless",
+          buildahImage: "quay.io/buildah/stable:v1.34",
           toolImage: "ghcr.io/sandip84/jenkins-agent-tools:v0.1.3"
         ]
         // ,
@@ -72,52 +72,24 @@ pipeline {
       }
     }
 
-stage('Build & Push Image (Rootless BuildKit)') {
+stage('Build & Push Image (Buildah)') {
   steps {
-    container('tools') {
+    container('buildah') {
       sh '''
       set -e
 
-      echo "Generating ECR login token..."
+      aws ecr get-login-password --region $AWS_REGION | \
+        buildah login --username AWS --password-stdin ${AWS_ACCOUNT}.dkr.ecr.${AWS_REGION}.amazonaws.com
 
-      TOKEN=$(aws ecr get-login-password --region $AWS_REGION)
+      buildah bud -t ${ECR_URI}:${K8S_IMAGE_TAG} .
+      buildah tag ${ECR_URI}:${K8S_IMAGE_TAG} ${ECR_URI}:latest
 
-      echo "HOME is $HOME"
-
-      mkdir -p $HOME/.docker
-
-      cat > $HOME/.docker/config.json <<EOF
-{
-  "auths": {
-    "${ECR_URI}": {
-      "username": "AWS",
-      "password": "$TOKEN"
-    }
-  }
-}
-EOF
-      '''
-    }
-
-    container('buildkit') {
-      sh '''
-      set -e
-
-      echo "Using Docker config from $HOME/.docker/config.json"
-
-      buildctl build \
-        --progress=plain \
-        --frontend dockerfile.v0 \
-        --local context=. \
-        --local dockerfile=. \
-        --output type=image,name=${ECR_URI}:${K8S_IMAGE_TAG},push=true \
-        --output type=image,name=${ECR_URI}:latest,push=true
+      buildah push ${ECR_URI}:${K8S_IMAGE_TAG}
+      buildah push ${ECR_URI}:latest
       '''
     }
   }
 }
-
-
 
 
     //---------k8s--------------------------------
