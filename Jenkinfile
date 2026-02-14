@@ -6,7 +6,7 @@ pipeline {
       yaml javaKanikoAgent(
         [
           mavenImage: "maven:3.9.6-eclipse-temurin-17",
-          kanikoImage: "gcr.io/kaniko-project/executor:debug",
+          buildkitImage: "moby/buildkit:rootless",
           toolImage: "ghcr.io/sandip84/jenkins-agent-tools:v0.1.3"
         ]
         // ,
@@ -72,15 +72,22 @@ pipeline {
       }
     }
 
-    stage('Build & Push Image (Kaniko)') {
+    stage('Build & Push Image (Rootless BuildKit)') {
       steps {
-        container('kaniko') {
+        container('buildkit') {
           sh """
-          /kaniko/executor \
-            --context ${WORKSPACE} \
-            --dockerfile Dockerfile \
-            --destination ${ECR_URI}:${K8S_IMAGE_TAG} \
-            --destination ${ECR_URI}:latest
+          buildkitd &
+          sleep 5
+
+          aws ecr get-login-password --region $AWS_REGION | \
+            buildctl login --username AWS --password-stdin ${ECR_URI}
+
+          buildctl build \
+            --frontend dockerfile.v0 \
+            --local context=. \
+            --local dockerfile=. \
+            --output type=image,name=${ECR_URI}:${K8S_IMAGE_TAG},push=true \
+            --output type=image,name=${ECR_URI}:latest,push=true
           """
         }
       }
