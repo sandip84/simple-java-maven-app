@@ -43,25 +43,23 @@ pipeline {
 
   stages {
 
-    stage('Trust GitHub Host') {
+    stage('Checkout CD Repo') {
       steps {
-        container('tools') {   // or whatever container has ssh + git
-          sh '''
+        sshagent(credentials: ['github-ssh']) {
+          sh """
             mkdir -p ~/.ssh
             chmod 700 ~/.ssh
             ssh-keyscan github.com >> ~/.ssh/known_hosts
             chmod 600 ~/.ssh/known_hosts
-          '''
+
+            git clone ${K8S_GIT_REPO} cd-repo
+            cd cd-repo
+            git checkout ${K8S_GIT_BRANCH}
+          """
         }
       }
     }
 
-    stage('Checkout') {
-      steps {
-        git branch: "${GIT_BRANCH}",
-            url: "${GIT_REPO}"
-      }
-    }
 
     stage('Build Java') {
       steps {
