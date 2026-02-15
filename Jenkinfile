@@ -43,6 +43,19 @@ pipeline {
 
   stages {
 
+    stage('Trust GitHub Host') {
+      steps {
+        container('tools') {   // or whatever container has ssh + git
+          sh '''
+            mkdir -p ~/.ssh
+            chmod 700 ~/.ssh
+            ssh-keyscan github.com >> ~/.ssh/known_hosts
+            chmod 600 ~/.ssh/known_hosts
+          '''
+        }
+      }
+    }
+
     stage('Checkout') {
       steps {
         git branch: "${GIT_BRANCH}",
