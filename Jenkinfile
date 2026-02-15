@@ -34,7 +34,7 @@ pipeline {
     ECR_URI = "${AWS_ACCOUNT}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPO}"
 
     // ===== K8S =====
-    K8S_GIT_REPO    = "https://github.com/sandip84/k8s.git"
+    K8S_GIT_REPO    = "git@github.com:sandip84/k8s.git"  //"https://github.com/sandip84/k8s.git"
     K8S_GIT_BRANCH  = "main"
     K8S_NAMESPACE = "java-app-ns"          // change if you use default
     APP_NAME      = "java-app"          // Deployment name
@@ -134,24 +134,35 @@ pipeline {
         }
 
         dir('cd-repo') {
+
+          // checkout CD repo (read-only, no SSH needed yet)
           git branch: "${K8S_GIT_BRANCH}", url: "${K8S_GIT_REPO}"
 
           sh """
             set -e
             FILE=apps/java-app/overlays/dev/kustomization.yaml
 
-            # update only the newTag line
+            # Update only the newTag line
             sed -i 's/^\\(\\s*newTag:\\s*\\).*/\\1${K8S_IMAGE_TAG}/' \$FILE
 
             git status
-            git add \$FILE
-
-            git commit -m "java-app: deploy ${K8S_IMAGE_TAG}" || echo "No changes to commit"
-            git push origin ${K8S_GIT_BRANCH}
           """
+
+          // SSH key is injected ONLY here
+          sshagent(credentials: ['github-ssh']) {
+            sh """
+              git config user.email "jenkins@local"
+              git config user.name "jenkins"
+
+              git add \$FILE
+              git commit -m "java-app: deploy ${K8S_IMAGE_TAG}" || echo "No changes to commit"
+              git push origin ${K8S_GIT_BRANCH}
+            """
+          }
         }
       }
     }
+    
 
     // stage('Create Namespace (YAML)') {
     //   steps {
