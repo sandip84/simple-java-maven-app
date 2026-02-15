@@ -72,36 +72,6 @@ pipeline {
       }
     }
 
-// stage('Build & Push Image (Buildah)') {
-//   steps {
-// container('buildah') {
-//   sh '''
-//     set -e
-
-//     mkdir -p /tmp/containers
-
-//     cat > /tmp/containers-storage.conf <<EOF
-// [storage]
-// driver = "vfs"
-// runroot = "/tmp/containers/run"
-// graphroot = "/tmp/containers/storage"
-// EOF
-
-//     export CONTAINERS_STORAGE_CONF=/tmp/containers-storage.conf
-
-//     aws ecr get-login-password --region $AWS_REGION | \
-//       buildah login --username AWS --password-stdin ${AWS_ACCOUNT}.dkr.ecr.${AWS_REGION}.amazonaws.com
-
-//     buildah bud -t ${ECR_URI}:${K8S_IMAGE_TAG} .
-//     buildah tag ${ECR_URI}:${K8S_IMAGE_TAG} ${ECR_URI}:latest
-//     buildah push ${ECR_URI}:${K8S_IMAGE_TAG}
-//     buildah push ${ECR_URI}:latest
-//   '''
-// }
-
-//   }
-// }
-
     stage('Build & Push Image (Buildah)') {
       steps {
         container('buildah') {
@@ -132,14 +102,14 @@ pipeline {
       }
     }
 
-    stage('DEBUG POD') {
-      steps {
-        container('tools') {
-          sh 'echo "Pod name: $HOSTNAME"'
-          sh 'kubectl get pod $HOSTNAME -o yaml'
-        }
-      }
-    }
+    // stage('DEBUG POD') {
+    //   steps {
+    //     container('tools') {
+    //       sh 'echo "Pod name: $HOSTNAME"'
+    //       sh 'kubectl get pod $HOSTNAME -o yaml'
+    //     }
+    //   }
+    // }
 
     stage('Verify Image Exists in  ECR') {
       steps {
@@ -156,71 +126,98 @@ pipeline {
       }
     }
 
-    stage('Create Namespace (YAML)') {
+    stage('Update CD Repo (Argo handoff)') {
       steps {
-        container('tools') {
-          sh """
-            kubectl apply -f namespace.yaml
-            kubectl apply -f ServiceAccount.yaml
-          """
-        }  
-      }
-    }
+        script {
+          def tag = "git-${sh(script: 'git rev-parse --short HEAD', returnStdout: true).trim()}"
+          env.K8S_IMAGE_TAG = tag
+        }
 
-    stage('Refresh ECR Pull Secret (Kind)') {
-      steps {
-        container('tools') {
-          sh """
-            TOKEN=\$(aws ecr get-login-password --region ${AWS_REGION})
+        dir('cd-repo') {
+          git branch: "${K8S_GIT_BRANCH}", url: "${K8S_GIT_REPO}"
 
-            kubectl create secret docker-registry ecr-secret \
-              --docker-server=${AWS_ACCOUNT}.dkr.ecr.${AWS_REGION}.amazonaws.com \
-              --docker-username=AWS \
-              --docker-password="\$TOKEN" \
-              -n ${K8S_NAMESPACE} \
-              --dry-run=client -o yaml | kubectl apply -f -
+          sh """
+            set -e
+            FILE=apps/java-app/overlays/dev/kustomization.yaml
+
+            # update only the newTag line
+            sed -i 's/^\\(\\s*newTag:\\s*\\).*/\\1${K8S_IMAGE_TAG}/' \$FILE
+
+            git status
+            git add \$FILE
+
+            git commit -m "java-app: deploy ${K8S_IMAGE_TAG}" || echo "No changes to commit"
+            git push origin ${K8S_GIT_BRANCH}
           """
         }
       }
     }
 
-    stage('Render Manifests with Image') {
-      steps {
-        sh """
-          mkdir -p rendered
+    // stage('Create Namespace (YAML)') {
+    //   steps {
+    //     container('tools') {
+    //       sh """
+    //         kubectl apply -f namespace.yaml
+    //         kubectl apply -f ServiceAccount.yaml
+    //       """
+    //     }  
+    //   }
+    // }
 
-          # Render deployment with correct image without modifying tracked file
-          sed "s|nginx|${ECR_URI}:${K8S_IMAGE_TAG}|g" deployment.yaml > rendered/deployment.yaml
+    // stage('Refresh ECR Pull Secret (Kind)') {
+    //   steps {
+    //     container('tools') {
+    //       sh """
+    //         TOKEN=\$(aws ecr get-login-password --region ${AWS_REGION})
 
-          # Copy other manifests as-is
-          cp service.yaml rendered/service.yaml
-          cp namespace.yaml rendered/namespace.yaml
-        """
-      }
-    }
+    //         kubectl create secret docker-registry ecr-secret \
+    //           --docker-server=${AWS_ACCOUNT}.dkr.ecr.${AWS_REGION}.amazonaws.com \
+    //           --docker-username=AWS \
+    //           --docker-password="\$TOKEN" \
+    //           -n ${K8S_NAMESPACE} \
+    //           --dry-run=client -o yaml | kubectl apply -f -
+    //       """
+    //     }
+    //   }
+    // }
 
-    stage('Apply to Kubernetes') {
-      steps {
-        container('tools') {
-          sh """
-            kubectl apply -f rendered/namespace.yaml
-            kubectl apply -f rendered/deployment.yaml
-            kubectl apply -f rendered/service.yaml
-          """
-        }
-      }
-    }
+    // stage('Render Manifests with Image') {
+    //   steps {
+    //     sh """
+    //       mkdir -p rendered
 
-    stage('Wait for Rollout') {
-      steps {
-        container('tools') {
-          sh """
-            kubectl rollout status deployment/${APP_NAME} -n ${K8S_NAMESPACE} --timeout=180s || true
-            kubectl get pods -n ${K8S_NAMESPACE}
-            kubectl describe deployment ${APP_NAME} -n ${K8S_NAMESPACE}
-          """
-        }
-      }
-    }
+    //       # Render deployment with correct image without modifying tracked file
+    //       sed "s|nginx|${ECR_URI}:${K8S_IMAGE_TAG}|g" deployment.yaml > rendered/deployment.yaml
+
+    //       # Copy other manifests as-is
+    //       cp service.yaml rendered/service.yaml
+    //       cp namespace.yaml rendered/namespace.yaml
+    //     """
+    //   }
+    // }
+
+    // stage('Apply to Kubernetes') {
+    //   steps {
+    //     container('tools') {
+    //       sh """
+    //         kubectl apply -f rendered/namespace.yaml
+    //         kubectl apply -f rendered/deployment.yaml
+    //         kubectl apply -f rendered/service.yaml
+    //       """
+    //     }
+    //   }
+    // }
+
+    // stage('Wait for Rollout') {
+    //   steps {
+    //     container('tools') {
+    //       sh """
+    //         kubectl rollout status deployment/${APP_NAME} -n ${K8S_NAMESPACE} --timeout=180s || true
+    //         kubectl get pods -n ${K8S_NAMESPACE}
+    //         kubectl describe deployment ${APP_NAME} -n ${K8S_NAMESPACE}
+    //       """
+    //     }
+    //   }
+    // }
   }
 }
