@@ -96,7 +96,7 @@ pipeline {
   
     //---------k8s--------------------------------
 
-    stage('Checkout CD Repo') {
+    stage('Checkout CD Repo K8s') {
       steps {
         git branch: "${K8S_GIT_BRANCH}",
             url: "${K8S_GIT_REPO}"
