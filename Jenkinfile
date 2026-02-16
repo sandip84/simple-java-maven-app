@@ -105,8 +105,8 @@ pipeline {
             ssh-keyscan github.com >> ~/.ssh/known_hosts
             chmod 600 ~/.ssh/known_hosts
 
-            git clone ${K8S_GIT_REPO} cd-repo
-            cd cd-repo
+            git clone ${K8S_GIT_REPO} cd-repo-k8s
+            cd cd-repo-k8s
             git checkout ${K8S_GIT_BRANCH}
           """
         }
@@ -154,7 +154,7 @@ pipeline {
           env.K8S_IMAGE_TAG = tag
         }
 
-        dir('cd-repo') {
+        dir('cd-repo-k8s') {
 
           // checkout CD repo (read-only, no SSH needed yet)
           git branch: "${K8S_GIT_BRANCH}", url: "${K8S_GIT_REPO}"
