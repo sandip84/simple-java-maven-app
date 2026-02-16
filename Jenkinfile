@@ -34,7 +34,7 @@ pipeline {
     ECR_URI = "${AWS_ACCOUNT}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPO}"
 
     // ===== K8S =====
-    K8S_GIT_REPO    = "git@github.com:sandip84/k8s.git"  //"https://github.com/sandip84/k8s.git"
+    K8S_GIT_REPO    = "https://github.com/sandip84/k8s.git"  //"git@github.com:sandip84/k8s.git"
     K8S_GIT_BRANCH  = "main"
     K8S_NAMESPACE = "java-app-ns"          // change if you use default
     APP_NAME      = "java-app"          // Deployment name
