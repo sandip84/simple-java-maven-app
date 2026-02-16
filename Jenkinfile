@@ -107,6 +107,8 @@ pipeline {
 
             git clone ${K8S_GIT_REPO} cd-repo-k8s
             cd cd-repo-k8s
+            # force SSH origin (critical)
+            git remote set-url origin ${K8S_GIT_REPO}            
             git checkout ${K8S_GIT_BRANCH}
           """
         }
