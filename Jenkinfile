@@ -52,9 +52,9 @@ pipeline {
             ssh-keyscan github.com >> ~/.ssh/known_hosts
             chmod 600 ~/.ssh/known_hosts
 
-            git clone ${K8S_GIT_REPO} cd-repo
+            git clone ${GIT_REPO} cd-repo
             cd cd-repo
-            git checkout ${K8S_GIT_BRANCH}
+            git checkout ${GIT_BRANCH}
           """
         }
       }
@@ -96,10 +96,20 @@ pipeline {
   
     //---------k8s--------------------------------
 
-    stage('Checkout CD Repo K8s') {
+    stage('Checkout CD Repo k8s') {
       steps {
-        git branch: "${K8S_GIT_BRANCH}",
-            url: "${K8S_GIT_REPO}"
+        sshagent(credentials: ['github-ssh']) {
+          sh """
+            mkdir -p ~/.ssh
+            chmod 700 ~/.ssh
+            ssh-keyscan github.com >> ~/.ssh/known_hosts
+            chmod 600 ~/.ssh/known_hosts
+
+            git clone ${K8S_GIT_REPO} cd-repo
+            cd cd-repo
+            git checkout ${K8S_GIT_BRANCH}
+          """
+        }
       }
     }
 
