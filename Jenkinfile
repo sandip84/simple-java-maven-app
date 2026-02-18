@@ -128,15 +128,6 @@ pipeline {
       }
     }
 
-    // stage('DEBUG POD') {
-    //   steps {
-    //     container('tools') {
-    //       sh 'echo "Pod name: $HOSTNAME"'
-    //       sh 'kubectl get pod $HOSTNAME -o yaml'
-    //     }
-    //   }
-    // }
-
     stage('Verify Image Exists in  ECR') {
       steps {
         container('tools') {
@@ -206,74 +197,5 @@ pipeline {
         }
       }
     }
-
-    
-
-    // stage('Create Namespace (YAML)') {
-    //   steps {
-    //     container('tools') {
-    //       sh """
-    //         kubectl apply -f namespace.yaml
-    //         kubectl apply -f ServiceAccount.yaml
-    //       """
-    //     }  
-    //   }
-    // }
-
-    // stage('Refresh ECR Pull Secret (Kind)') {
-    //   steps {
-    //     container('tools') {
-    //       sh """
-    //         TOKEN=\$(aws ecr get-login-password --region ${AWS_REGION})
-
-    //         kubectl create secret docker-registry ecr-secret \
-    //           --docker-server=${AWS_ACCOUNT}.dkr.ecr.${AWS_REGION}.amazonaws.com \
-    //           --docker-username=AWS \
-    //           --docker-password="\$TOKEN" \
-    //           -n ${K8S_NAMESPACE} \
-    //           --dry-run=client -o yaml | kubectl apply -f -
-    //       """
-    //     }
-    //   }
-    // }
-
-    // stage('Render Manifests with Image') {
-    //   steps {
-    //     sh """
-    //       mkdir -p rendered
-
-    //       # Render deployment with correct image without modifying tracked file
-    //       sed "s|nginx|${ECR_URI}:${K8S_IMAGE_TAG}|g" deployment.yaml > rendered/deployment.yaml
-
-    //       # Copy other manifests as-is
-    //       cp service.yaml rendered/service.yaml
-    //       cp namespace.yaml rendered/namespace.yaml
-    //     """
-    //   }
-    // }
-
-    // stage('Apply to Kubernetes') {
-    //   steps {
-    //     container('tools') {
-    //       sh """
-    //         kubectl apply -f rendered/namespace.yaml
-    //         kubectl apply -f rendered/deployment.yaml
-    //         kubectl apply -f rendered/service.yaml
-    //       """
-    //     }
-    //   }
-    // }
-
-    // stage('Wait for Rollout') {
-    //   steps {
-    //     container('tools') {
-    //       sh """
-    //         kubectl rollout status deployment/${APP_NAME} -n ${K8S_NAMESPACE} --timeout=180s || true
-    //         kubectl get pods -n ${K8S_NAMESPACE}
-    //         kubectl describe deployment ${APP_NAME} -n ${K8S_NAMESPACE}
-    //       """
-    //     }
-    //   }
-    // }
   }
 }
