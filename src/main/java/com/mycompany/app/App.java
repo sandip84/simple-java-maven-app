@@ -9,7 +9,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 public class App {
 
-    private static final String MESSAGE = "Hello argocd-after restore & Kustomize-1";
+    private static final String MESSAGE = "Hello argocd-after restore & Kustomize-2";
 
     public static void main(String[] args) {
         SpringApplication.run(App.class, args);

@@ -177,6 +177,7 @@ pipeline {
 
     stage('Update CD Repo (Argo handoff)') {
       steps {
+        container('tools') {
         // dir('cd-repo-k8s') {
         //   sh """
         //     FILE=apps/java-app/overlays/dev/kustomization.yaml
@@ -202,6 +203,7 @@ pipeline {
               git push origin ${K8S_GIT_BRANCH}
             """
           }
+        }
         }
       }
     }
