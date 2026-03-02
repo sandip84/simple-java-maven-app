@@ -214,13 +214,23 @@ stage('DEBUG') {
               kustomize edit set image ${ECR_URI}=${ECR_URI}:${K8S_IMAGE_TAG}
               git status
             """
+            // sshagent(credentials: ['github-ssh']) {
+            //   sh """
+            //     mkdir -p ~/.ssh
+            //     chmod 700 ~/.ssh
+            //     ssh-keyscan github.com >> ~/.ssh/known_hosts
+            //     chmod 600 ~/.ssh/known_hosts
+
+            //     git config user.email "jenkins@local"
+            //     git config user.name "jenkins"
+
+            //     git add kustomization.yaml
+            //     git commit -m "java-app: deploy ${K8S_IMAGE_TAG}" || echo "No changes"
+            //     git push origin ${K8S_GIT_BRANCH}
+            //   """
+            // }
             sshagent(credentials: ['github-ssh']) {
               sh """
-                mkdir -p ~/.ssh
-                chmod 700 ~/.ssh
-                ssh-keyscan github.com >> ~/.ssh/known_hosts
-                chmod 600 ~/.ssh/known_hosts
-
                 git config user.email "jenkins@local"
                 git config user.name "jenkins"
 
@@ -229,16 +239,6 @@ stage('DEBUG') {
                 git push origin ${K8S_GIT_BRANCH}
               """
             }
-          // sshagent(credentials: ['github-ssh']) {
-          //   sh """
-          //     git config user.email "jenkins@local"
-          //     git config user.name "jenkins"
-
-          //     git add kustomization.yaml
-          //     git commit -m "java-app: deploy ${K8S_IMAGE_TAG}" || echo "No changes"
-          //     git push origin ${K8S_GIT_BRANCH}
-          //   """
-          // }
         }
         }
       }
