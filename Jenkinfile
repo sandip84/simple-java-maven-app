@@ -177,19 +177,19 @@ pipeline {
 
     stage('Update CD Repo (Argo handoff)') {
       steps {
-        dir('cd-repo-k8s') {
-          sh """
-            FILE=apps/java-app/overlays/dev/kustomization.yaml
-            sed -i 's/^\\(\\s*newTag:\\s*\\).*/\\1${K8S_IMAGE_TAG}/' \$FILE
-            git status
-          """
+        // dir('cd-repo-k8s') {
+        //   sh """
+        //     FILE=apps/java-app/overlays/dev/kustomization.yaml
+        //     sed -i 's/^\\(\\s*newTag:\\s*\\).*/\\1${K8S_IMAGE_TAG}/' \$FILE
+        //     git status
+        //   """
 
-          // dir('cd-repo-k8s/apps/java-app/overlays/dev') {
-          //   sh """
-          //     echo "using kustomize..."
-          //     kustomize edit set image java-app=${K8S_IMAGE_TAG}
-          //     git status
-          //   """
+          dir('cd-repo-k8s/apps/java-app/overlays/dev') {
+            sh """
+              echo "using kustomize..."
+              kustomize edit set image java-app=${K8S_IMAGE_TAG}
+              git status
+            """
           
 
           sshagent(credentials: ['github-ssh']) {
