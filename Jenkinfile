@@ -188,11 +188,10 @@ pipeline {
           dir('cd-repo-k8s') {
             sh """
               echo "using kustomize..."
-              kustomize edit set image java-app=${K8S_IMAGE_TAG}
+              kustomize edit set image java-app=${ECR_URI}:${K8S_IMAGE_TAG}
               git status
             """
           
-
           sshagent(credentials: ['github-ssh']) {
             sh """
               git config user.email "jenkins@local"
