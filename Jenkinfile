@@ -185,7 +185,7 @@ pipeline {
         //     git status
         //   """
 
-          dir('cd-repo-k8s') {
+          dir('apps/java-app/overlays/dev') {
             sh """
               echo "using kustomize..."
               kustomize edit set image java-app=${ECR_URI}:${K8S_IMAGE_TAG}
