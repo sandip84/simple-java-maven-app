@@ -175,6 +175,26 @@ pipeline {
       }
     }
 
+stage('DEBUG') {
+  steps {
+    container('tools') {
+      sh '''
+        echo "===== DEBUG START ====="
+        echo "PWD:"
+        pwd
+        echo
+        echo "ROOT CONTENT:"
+        ls -la
+        echo
+        echo "SEARCHING kustomization.yaml:"
+        find . -name kustomization.yaml
+        echo "===== DEBUG END ====="
+      '''
+    }
+  }
+}
+
+
     stage('Update CD Repo (Argo handoff)') {
       steps {
         container('tools') {
@@ -185,7 +205,7 @@ pipeline {
         //     git status
         //   """
 
-          dir('apps/java-app/overlays/dev') {
+          dir('apps/java-app/overlays/dev/kustomization.yaml') {
             sh """
               echo "using kustomize..."
               kustomize edit set image java-app=${ECR_URI}:${K8S_IMAGE_TAG}
