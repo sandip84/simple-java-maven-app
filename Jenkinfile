@@ -208,6 +208,8 @@ stage('DEBUG') {
           dir('cd-repo-k8s/apps/java-app/overlays/dev') {
             sh """
               echo "using kustomize..."
+              pwd
+              ls -l
               # kustomize edit set image java-app=${ECR_URI}:${K8S_IMAGE_TAG}
               kustomize edit set image ${ECR_URI}=${ECR_URI}:${K8S_IMAGE_TAG}
               git status
