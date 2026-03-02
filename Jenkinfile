@@ -7,7 +7,7 @@ pipeline {
         [
           mavenImage: "maven:3.9.6-eclipse-temurin-17",
           buildahImage: "ghcr.io/sandip84/buildah-agent-tools.git:v1.0.0",
-          toolImage: "ghcr.io/sandip84/jenkins-agent-tools:v0.1.3"
+          toolImage: "ghcr.io/sandip84/jenkins-agent-tools:v0.1.4"
         ]
         // ,
         // jenkinsAgentTools(
