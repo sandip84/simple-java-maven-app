@@ -38,10 +38,25 @@ pipeline {
     K8S_GIT_BRANCH  = "main"
     K8S_NAMESPACE = "java-app-ns"          // change if you use default
     APP_NAME      = "java-app"          // Deployment name
-    K8S_IMAGE_TAG = sh(script: "git rev-parse --short HEAD", returnStdout: true).trim()
+    //K8S_IMAGE_TAG = sh(script: "git rev-parse --short HEAD", returnStdout: true).trim()
   }
 
   stages {
+
+    stage('Set Image Tag') {
+      steps {
+        container('tools') {
+          script {
+            env.K8S_IMAGE_TAG = sh(
+              script: "cd cd-repo && git rev-parse --short HEAD",
+              returnStdout: true
+            ).trim()
+
+            echo "K8S_IMAGE_TAG=${env.K8S_IMAGE_TAG}"
+          }
+        }
+      }
+    }
 
     stage('Checkout CD Repo') {
       steps {
