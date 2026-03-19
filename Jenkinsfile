@@ -38,25 +38,10 @@ pipeline {
     K8S_GIT_BRANCH  = "main"
     K8S_NAMESPACE = "java-app-ns"          // change if you use default
     APP_NAME      = "java-app"          // Deployment name
-    //K8S_IMAGE_TAG = sh(script: "git rev-parse --short HEAD", returnStdout: true).trim()
+    K8S_IMAGE_TAG = sh(script: "git rev-parse --short HEAD", returnStdout: true).trim()
   }
 
   stages {
-
-    stage('Set Image Tag') {
-      steps {
-        container('tools') {
-          script {
-            env.K8S_IMAGE_TAG = sh(
-              script: "cd cd-repo && git rev-parse --short HEAD",
-              returnStdout: true
-            ).trim()
-
-            echo "K8S_IMAGE_TAG=${env.K8S_IMAGE_TAG}"
-          }
-        }
-      }
-    }
 
     stage('Checkout CD Repo') {
       steps {
@@ -74,7 +59,6 @@ pipeline {
         }
       }
     }
-
 
     stage('Build Java') {
       steps {
@@ -190,9 +174,36 @@ pipeline {
       }
     }
 
+stage('DEBUG') {
+  steps {
+    container('tools') {
+      sh '''
+        echo "===== DEBUG START ====="
+        echo "PWD:"
+        pwd
+        echo
+        echo "ROOT CONTENT:"
+        ls -la
+        echo
+        echo "SEARCHING kustomization.yaml:"
+        find . -name kustomization.yaml
+        echo "===== DEBUG END ====="
+      '''
+    }
+  }
+}
+
+
     stage('Update CD Repo (Argo handoff)') {
       steps {
         container('tools') {
+        // dir('cd-repo-k8s') {
+        //   sh """
+        //     FILE=apps/java-app/overlays/dev/kustomization.yaml
+        //     sed -i 's/^\\(\\s*newTag:\\s*\\).*/\\1${K8S_IMAGE_TAG}/' \$FILE
+        //     git status
+        //   """
+
           dir('cd-repo-k8s/apps/java-app/overlays/dev') {
             sh """
               echo "using kustomize..."
@@ -217,11 +228,19 @@ pipeline {
                 git push origin ${K8S_GIT_BRANCH}
               """
             }
+          // sshagent(credentials: ['github-ssh']) {
+          //   sh """
+          //     git config user.email "jenkins@local"
+          //     git config user.name "jenkins"
+
+          //     git add kustomization.yaml
+          //     git commit -m "java-app: deploy ${K8S_IMAGE_TAG}" || echo "No changes"
+          //     git push origin ${K8S_GIT_BRANCH}
+          //   """
+          // }
         }
         }
       }
     }
-
-
   }
 }
