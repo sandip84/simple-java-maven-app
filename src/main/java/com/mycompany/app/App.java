@@ -9,7 +9,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 public class App {
 
-    private static final String MESSAGE = "Hello argocd-after restore & efs-8";
+    private static final String MESSAGE = "Hello argocd-after restore & efs-1";
 
     public static void main(String[] args) {
         SpringApplication.run(App.class, args);
