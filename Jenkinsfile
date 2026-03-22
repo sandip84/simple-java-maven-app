@@ -197,13 +197,6 @@ stage('DEBUG') {
     stage('Update CD Repo (Argo handoff)') {
       steps {
         container('tools') {
-        // dir('cd-repo-k8s') {
-        //   sh """
-        //     FILE=apps/java-app/overlays/dev/kustomization.yaml
-        //     sed -i 's/^\\(\\s*newTag:\\s*\\).*/\\1${K8S_IMAGE_TAG}/' \$FILE
-        //     git status
-        //   """
-
           dir('cd-repo-k8s/apps/java-app/overlays/dev') {
             sh """
               echo "using kustomize..."
@@ -228,16 +221,6 @@ stage('DEBUG') {
                 git push origin ${K8S_GIT_BRANCH}
               """
             }
-          // sshagent(credentials: ['github-ssh']) {
-          //   sh """
-          //     git config user.email "jenkins@local"
-          //     git config user.name "jenkins"
-
-          //     git add kustomization.yaml
-          //     git commit -m "java-app: deploy ${K8S_IMAGE_TAG}" || echo "No changes"
-          //     git push origin ${K8S_GIT_BRANCH}
-          //   """
-          // }
         }
         }
       }
