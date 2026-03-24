@@ -9,7 +9,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 public class App {
 
-    private static final String MESSAGE = "Hello argocd-after-java-app-ingress";
+    private static final String MESSAGE = "Hello 123";
 
     public static void main(String[] args) {
         SpringApplication.run(App.class, args);
