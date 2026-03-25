@@ -9,7 +9,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 public class App {
 
-    private static final String MESSAGE = "check after sleep: git app";
+    private static final String MESSAGE = "reinsated k8s not aws irsa";
 
     public static void main(String[] args) {
         SpringApplication.run(App.class, args);
