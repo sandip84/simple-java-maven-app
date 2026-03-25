@@ -9,7 +9,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 public class App {
 
-    private static final String MESSAGE = "reinsated k8s not aws irsa";
+    private static final String MESSAGE = "added cred in tf";
 
     public static void main(String[] args) {
         SpringApplication.run(App.class, args);
