@@ -1,0 +1,229 @@
+@Library('jenkins-shared-lib@main') _
+
+pipeline {
+  agent {
+    kubernetes {
+      yaml javaBuildkitAgent(
+        [
+          mavenImage: "maven:3.9.6-eclipse-temurin-17",
+          buildahImage: "ghcr.io/sandip84/buildah-agent-tools.git:v1.0.0",
+          toolImage: "ghcr.io/sandip84/jenkins-agent-tools:v0.1.4"
+        ]
+        // ,
+        // jenkinsAgentTools(
+        //   toolImage: "ghcr.io/sandip84/jenkins-agent-tools:v0.1.3"
+        // )
+      )
+    }
+  }
+
+  environment {
+    // ===== GIT =====
+    GIT_REPO = "https://github.com/sandip84/simple-java-maven-app.git"
+    GIT_BRANCH = "sandy"
+
+    // ===== NEXUS =====
+    NEXUS_REPO = "http://nexus-nexus-repository-manager.nexus.svc.cluster.local:8081/repository/maven-snapshots"
+
+    // ===== AWS =====
+    AWS_REGION = "us-east-1"
+    AWS_ACCOUNT = "168400405045"
+    ECR_REPO = "java-app"
+
+    // IMAGE_TAG = "${BUILD_NUMBER}"
+    ECR_URI = "${AWS_ACCOUNT}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPO}"
+
+    // ===== K8S =====
+    K8S_GIT_REPO    = "git@github.com:sandip84/k8s.git"   //"https://github.com/sandip84/k8s.git" 
+    K8S_GIT_BRANCH  = "main"
+    K8S_NAMESPACE = "java-app-ns"          // change if you use default
+    APP_NAME      = "java-app"          // Deployment name
+    K8S_IMAGE_TAG = sh(script: "git rev-parse --short HEAD", returnStdout: true).trim()
+  }
+
+  stages {
+
+    stage('Checkout CD Repo') {
+      steps {
+        sshagent(credentials: ['github-ssh']) {
+          sh """
+            mkdir -p ~/.ssh
+            chmod 700 ~/.ssh
+            ssh-keyscan github.com >> ~/.ssh/known_hosts
+            chmod 600 ~/.ssh/known_hosts
+
+            git clone ${GIT_REPO} cd-repo
+            cd cd-repo
+            git checkout ${GIT_BRANCH}
+          """
+        }
+      }
+    }
+
+    stage('Build Java') {
+      steps {
+        container('maven') {
+          sh '''
+             mvn clean package -DskipTests
+          '''
+        }  
+      }
+    }
+
+    stage('Deploy JAR to Nexus') {
+      steps {
+        container('maven') {
+          sh """
+          mvn deploy \
+            -DskipTests \
+            -DaltDeploymentRepository=nexus::default::${NEXUS_REPO}
+          """
+        }  
+      }
+    }
+
+    stage('Build & Push Image (Buildah)') {
+      steps {
+        container('buildah') {
+          sh '''
+            chmod +x buildah-build.sh
+            ./buildah-build.sh
+          '''
+        }
+      }
+    }
+  
+    //---------k8s--------------------------------
+
+    stage('Checkout CD Repo k8s') {
+      steps {
+        sshagent(credentials: ['github-ssh']) {
+          sh """
+            rm -rf cd-repo-k8s
+
+            mkdir -p ~/.ssh
+            chmod 700 ~/.ssh
+            ssh-keyscan github.com >> ~/.ssh/known_hosts
+            chmod 600 ~/.ssh/known_hosts
+
+            git clone ${K8S_GIT_REPO} cd-repo-k8s
+            cd cd-repo-k8s
+            git checkout ${K8S_GIT_BRANCH}
+
+            git remote -v
+          """
+        }
+      }
+    }
+
+
+    stage('Validate Inputs') {
+      steps {
+        script {
+          if (!K8S_IMAGE_TAG?.trim()) {
+            error("IMAGE_TAG is required (example: git-fea78db).")
+          }
+        }
+      }
+    }
+
+    stage('Verify Image Exists in  ECR') {
+      steps {
+        container('tools') {
+          sh """
+            aws ecr describe-images \
+              --region ${AWS_REGION} \
+              --repository-name ${ECR_REPO} \
+              --image-ids imageTag=${K8S_IMAGE_TAG} \
+              --query 'imageDetails[0].imageDigest' \
+              --output text
+          """
+        }
+      }
+    }
+
+    stage('Ensure ECR Pull Secret (Non-EKS only)') {
+      steps {
+        container('tools') {
+          sh """
+            set -e
+
+            PROVIDER=\$(kubectl get nodes -o jsonpath='{.items[0].spec.providerID}' || true)
+
+            echo "Node providerID: \$PROVIDER"
+
+            if echo "\$PROVIDER" | grep -q aws; then
+              echo "Running on EKS — skipping ecr-secret creation (IAM handles pulls)"
+              exit 0
+            fi
+
+            echo "Non-EKS cluster detected (KIND/local) — creating/updating ecr-secret"
+
+            TOKEN=\$(aws ecr get-login-password --region ${AWS_REGION})
+
+            kubectl create secret docker-registry ecr-secret \
+              --docker-server=${AWS_ACCOUNT}.dkr.ecr.${AWS_REGION}.amazonaws.com \
+              --docker-username=AWS \
+              --docker-password="\$TOKEN" \
+              -n ${K8S_NAMESPACE} \
+              --dry-run=client -o yaml | kubectl apply -f -
+
+            echo "ecr-secret ensured in namespace ${K8S_NAMESPACE}"
+          """
+        }
+      }
+    }
+
+stage('DEBUG') {
+  steps {
+    container('tools') {
+      sh '''
+        echo "===== DEBUG START ====="
+        echo "PWD:"
+        pwd
+        echo
+        echo "ROOT CONTENT:"
+        ls -la
+        echo
+        echo "SEARCHING kustomization.yaml:"
+        find . -name kustomization.yaml
+        echo "===== DEBUG END ====="
+      '''
+    }
+  }
+}
+
+
+    stage('Update CD Repo (Argo handoff)') {
+      steps {
+        container('tools') {
+          dir('cd-repo-k8s/apps/java-app/overlays/dev') {
+            sh """
+              echo "using kustomize..."
+              pwd
+              ls -l
+              # kustomize edit set image java-app=${ECR_URI}:${K8S_IMAGE_TAG}
+              kustomize edit set image ${ECR_URI}=${ECR_URI}:${K8S_IMAGE_TAG}
+              git status
+            """
+            sshagent(credentials: ['github-ssh']) {
+              sh """
+                mkdir -p ~/.ssh
+                chmod 700 ~/.ssh
+                ssh-keyscan github.com >> ~/.ssh/known_hosts
+                chmod 600 ~/.ssh/known_hosts
+
+                git config user.email "jenkins@local"
+                git config user.name "jenkins"
+
+                git add kustomization.yaml
+                git commit -m "java-app: deploy ${K8S_IMAGE_TAG}" || echo "No changes"
+                git push origin ${K8S_GIT_BRANCH}
+              """
+            }
+        }
+        }
+      }
+    }
+  }
+}
