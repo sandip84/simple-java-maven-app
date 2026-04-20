@@ -1,0 +1,15 @@
+pipeline {
+  triggers {
+    githubPush()
+  }
+
+  agent any
+
+  stages {
+    stage('Test') {
+      steps {
+        echo "Webhook triggered build!123-master"
+      }
+    }
+  }
+}
