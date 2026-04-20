@@ -1,152 +1,15 @@
 pipeline {
-  agent {
-    kubernetes {
-      label 'maven'
-      defaultContainer 'maven'
-      yaml """
-apiVersion: v1
-kind: Pod
-spec:
-  volumes:
-    - name: maven-settings
-      configMap:
-        name: maven-settings
-        items:
-          - key: settings.xml
-            path: settings.xml
-
-    - name: maven-repo-cache
-      emptyDir: {}
-  containers:
-    - name: maven
-      image: maven:3.9.6-eclipse-temurin-17
-      command:
-        - cat
-      tty: true
-      volumeMounts:
-        - name: maven-settings
-          mountPath: /root/.m2/settings.xml
-          subPath: settings.xml
-          readOnly: true
-        - name: maven-repo-cache
-          mountPath: /root/.m2/repository
-    - name: kaniko
-      image: gcr.io/kaniko-project/executor:debug
-      command:
-        - sh
-        - -c
-        - cat
-      tty: true      
-      env:    
-      - name: AWS_ACCESS_KEY_ID
-        valueFrom:
-          secretKeyRef:
-            name: aws-creds
-            key: AWS_ACCESS_KEY_ID
-      - name: AWS_SECRET_ACCESS_KEY
-        valueFrom:
-          secretKeyRef:
-            name: aws-creds
-            key: AWS_SECRET_ACCESS_KEY
-      - name: AWS_REGION
-        valueFrom:
-          secretKeyRef:
-            name: aws-creds
-            key: AWS_REGION
-    - name: jnlp
-      image: jenkins/inbound-agent:3355.v388858a_47b_33-7
-      args: ['\$(JENKINS_SECRET)', '\$(JENKINS_NAME)']
-"""
-    }
+  triggers {
+    githubPush()
   }
-  environment {
-    // ===== GIT =====
-    GIT_REPO = "https://github.com/sandip84/simple-java-maven-app.git"
-    GIT_BRANCH = "master"
 
-    // ===== NEXUS =====
-    NEXUS_REPO = "http://nexus-nexus-repository-manager.nexus.svc.cluster.local:8081/repository/maven-snapshots"
-
-    // ===== AWS =====
-    AWS_REGION = "us-east-1"
-    AWS_ACCOUNT = "168400405045"
-    ECR_REPO = "java-app"
-
-    IMAGE_TAG = "${BUILD_NUMBER}"
-    ECR_URI = "${AWS_ACCOUNT}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPO}"
-
-    ECS_CLUSTER = "my-cluster"
-    ECS_SERVICE = "my-service"
-  }
+  agent any
 
   stages {
-
-    stage('Checkout') {
+    stage('Test') {
       steps {
-        git branch: "${GIT_BRANCH}",
-            url: "${GIT_REPO}"
+        echo "Webhook triggered build!123-master"
       }
     }
-
-    stage('Build Java') {
-      steps {
-        sh '''
-           mvn clean package -DskipTests
-        '''
-      }
-    }
-
-    stage('Deploy JAR to Nexus') {
-      steps {
-        sh """
-        mvn deploy \
-          -DskipTests \
-          -DaltDeploymentRepository=nexus::default::${NEXUS_REPO}
-        """
-      }
-    }
-
-    stage('Build & Push Image (Kaniko)') {
-      steps {
-        container('kaniko') {
-          sh """
-          /kaniko/executor \
-            --context ${WORKSPACE} \
-            --dockerfile Dockerfile \
-            --destination ${ECR_URI}:${IMAGE_TAG} \
-            --destination ${ECR_URI}:latest
-          """
-        }
-      }
-    }
-
-    // stage('Login to ECR') {
-    //   steps {
-    //     sh """
-    //     aws ecr get-login-password --region ${AWS_REGION} \
-    //     | docker login --username AWS --password-stdin ${AWS_ACCOUNT}.dkr.ecr.${AWS_REGION}.amazonaws.com
-    //     """
-    //   }
-    // }
-
-    // stage('Push Image to ECR') {
-    //   steps {
-    //     sh """
-    //     docker push ${ECR_URI}:${IMAGE_TAG}
-    //     docker push ${ECR_URI}:latest
-    //     """
-    //   }
-    // }
-
-    // stage('Deploy to Fargate') {
-    //   steps {
-    //     sh """
-    //     aws ecs update-service \
-    //       --cluster ${ECS_CLUSTER} \
-    //       --service ${ECS_SERVICE} \
-    //       --force-new-deployment
-    //     """
-    //   }
-    // }
   }
 }
